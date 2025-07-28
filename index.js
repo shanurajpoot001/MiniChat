@@ -6,6 +6,9 @@ const Chat = require("./models/chat.js");
 const methodOverride = require("method-override");
 const ExpressError = require("./ExpressError");
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
+const dotenv = require('dotenv');
+dotenv.config();
 
 
 app.set("views" , path.join(__dirname , "views"));
@@ -14,10 +17,17 @@ app.use(express.static(path.join(__dirname , "public"))); // use to connect css 
 app.use(express.urlencoded({extended:true})); // use to get data access ree.body from post
 app.use(methodOverride("_method")); // use to use put request
 app.use(session({
-  secret: 'minichatsecret',
+  secret: process.env.SECRET,
   resave: false,
-  saveUninitialized: true
+  saveUninitialized: true,
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGO_URL, // uses your Atlas or local MongoDB URL
+    collectionName: 'sessions'
+  })
 }));
+
+
+const dburl = process.env.MONGO_URL || 'mongodb://127.0.0.1:27017/fakeWhatsapp';
 
 // Flash message middleware
 app.use((req, res, next) => {
@@ -35,7 +45,7 @@ main()
   console.log(err)});
 
 async function main() {
-  await mongoose.connect('mongodb://127.0.0.1:27017/fakeWhatsapp');
+  await mongoose.connect(dburl);
 }
 
 
