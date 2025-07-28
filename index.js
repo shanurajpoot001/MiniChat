@@ -144,7 +144,8 @@ app.delete("/chats/:id" , asyncWrap ( async (req , res) => {
 
 
 app.get("/" , (req , res) => {
-  res.send("root is working");
+  // res.send("root is working");
+   res.redirect("/chats");
 });
 
 
