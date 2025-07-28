@@ -5,6 +5,7 @@ const path = require("path");
 const Chat = require("./models/chat.js");
 const methodOverride = require("method-override");
 const ExpressError = require("./ExpressError");
+const session = require('express-session');
 
 
 app.set("views" , path.join(__dirname , "views"));
@@ -12,6 +13,20 @@ app.set("view engine" , "ejs");
 app.use(express.static(path.join(__dirname , "public"))); // use to connect css style.css from public folder
 app.use(express.urlencoded({extended:true})); // use to get data access ree.body from post
 app.use(methodOverride("_method")); // use to use put request
+app.use(session({
+  secret: 'minichatsecret',
+  resave: false,
+  saveUninitialized: true
+}));
+
+// Flash message middleware
+app.use((req, res, next) => {
+  res.locals.success = req.session.success || null;
+  res.locals.error = req.session.error || null;
+  delete req.session.success;
+  delete req.session.error;
+  next();
+});
 
 main()
 .then(() => {
@@ -28,10 +43,21 @@ async function main() {
 // Index chats
 app.get("/chats" , async(req , res) =>{
   try{
-    let chats = await  Chat.find();
-    //console.log(chats);
-    //res.send("working...");
-    res.render("index.ejs" , {chats});
+    let { q } = req.query;
+    let chats;
+    if (q && q.trim() !== "") {
+      const regex = new RegExp(q, 'i');
+      chats = await Chat.find({
+        $or: [
+          { from: regex },
+          { to: regex },
+          { msg: regex }
+        ]
+      });
+    } else {
+      chats = await  Chat.find();
+    }
+    res.render("index.ejs" , {chats, q});
   } catch(err) {
     next(err);
   }
@@ -67,6 +93,7 @@ app.post("/chats" , asyncWrap ( async (req , res) =>{
     console.log(err);
    });*/
   
+  req.session.success = "Chat created successfully!";
   res.redirect("/chats");
    //} catch(err) {
    // next(err);
@@ -118,9 +145,8 @@ app.put("/chats/:id" , asyncWrap ( async (req , res) => {
      { msg: newMsg} , 
      { runValidators: true , new: true}
     );
-
-    console.log(updatedChat);
-    res.redirect("/chats");
+  req.session.success = "Chat updated successfully!";
+  res.redirect("/chats");
  // }
   //catch(err){
    // next(err);
@@ -133,7 +159,7 @@ app.delete("/chats/:id" , asyncWrap ( async (req , res) => {
  // try{
     let {id} = req.params;
   let deletedChat = await Chat.findByIdAndDelete(id);
-  console.log(deletedChat);
+  req.session.success = "Chat deleted successfully!";
   res.redirect("/chats");
 
  // } catch(err) {
